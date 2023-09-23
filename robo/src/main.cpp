@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "config.h"
 #include "pinout.h"
+#include "servo.h"
+
 
 #define isInvertX true
 #define isInvertY false
@@ -10,19 +12,23 @@
 #define limitAngleY 180
 #define limitAngleZ 180
 
-#define delayTime 1000
+#define delayTime 200
+
+Servo myservo;
+int pos;
+
+
+
 
 char recieve;
 
 struct Motor {
   int stepPin;
-  int dirPin;
+  int dirPin; 
   int enPin;
   int switchPin;
-  int steppos =0;
   bool isInvert;
-  float anglePerStep = 0.50625; // 0.50625 degree per step (1.8 degree per step) (1/16 micro step)(2:9 gear ratio)
-  float angle = steppos * 1.975; // 1/0.50625 step per degree
+  float angle = 0;
   float limitAngle;
 };
 
@@ -53,7 +59,7 @@ void homeX(){
     digitalWrite(motor[i].stepPin, LOW);
     delayMicroseconds(delayTime);
   }
-  motor[i].angle = 0; 
+  motor[i].angle = 0;
   Serial.println("motor " + String(i) + "homed");
 }
 
@@ -94,47 +100,7 @@ void setHome() {
   homeY();
   homeZ();
 }
-// void move(int motorNo, float Targetsteppos){
-//   while (Targetsteppos < motor[motorNo].steppos) {  
-//     digitalWrite(motor[motorNo].dirPin, !motor[motorNo].isInvert);
-//     digitalWrite(motor[motorNo].stepPin, HIGH);
-//     digitalWrite(motor[motorNo].stepPin, LOW);
-//     motor[motorNo].steppos--;
-//     delayMicroseconds(delayTime);
-//     Serial.println(motor[motorNo].steppos);
-//   }
-  
-//   while (Targetsteppos > motor[motorNo].steppos) {    
-//     digitalWrite(motor[motorNo].dirPin, !motor[motorNo].isInvert);
-//     digitalWrite(motor[motorNo].stepPin, HIGH);
-//     digitalWrite(motor[motorNo].stepPin, LOW);;
-//     digitalWrite(motor[motorNo].stepPin, LOW);
-//     motor[motorNo].steppos++;
-//     delayMicroseconds(delayTime);
-//     Serial.println(motor[motorNo].steppos);
-//   }
-// }
 
-void move(int motorNo, float targetAngle){
-  float Targetsteppos = targetAngle / motor[motorNo].anglePerStep;
-  while (Targetsteppos < motor[motorNo].steppos) {  
-    digitalWrite(motor[motorNo].dirPin, !motor[motorNo].isInvert);
-    digitalWrite(motor[motorNo].stepPin, HIGH);
-    digitalWrite(motor[motorNo].stepPin, LOW);
-    motor[motorNo].steppos--;
-    delayMicroseconds(delayTime);
-    Serial.println(motor[motorNo].steppos);
-  }
-  while (Targetsteppos > motor[motorNo].steppos) {    
-    digitalWrite(motor[motorNo].dirPin, motor[motorNo].isInvert);
-    digitalWrite(motor[motorNo].stepPin, HIGH);
-    digitalWrite(motor[motorNo].stepPin, LOW);;
-    digitalWrite(motor[motorNo].stepPin, LOW);
-    motor[motorNo].steppos++;
-    delayMicroseconds(delayTime);
-    Serial.println(motor[motorNo].steppos);
-  }
-}
 
 void setAngle(int motorNo, float finalAngle) {
   digitalWrite(motor[0].enPin, LOW);
@@ -183,9 +149,9 @@ void setAngle(int motorNo, float finalAngle) {
 }
 
 void setAllAngle(float finalX, float finalY, float finalZ){
-  setAngle(0, finalX);
-  setAngle(1, finalY);
   setAngle(2, finalZ);
+  setAngle(1, finalY);
+  setAngle(0, finalX);
 }
 
 void testSwitch(){
@@ -200,6 +166,7 @@ void testSwitch(){
 
 
 void setup() {
+  
   motor[0].stepPin = X_STEP_PIN;
   motor[0].dirPin = X_DIR_PIN;
   motor[0].enPin = X_ENABLE_PIN;
@@ -221,6 +188,9 @@ void setup() {
   motor[2].isInvert = isInvertZ;
   motor[2].limitAngle = limitAngleZ;
   // put your setup code here, to run once:
+
+  myservo.attach(11);
+
   Serial.begin(115200);
   for (int i = 0; i < 3; i++) {
     pinMode(motor[i].stepPin, OUTPUT);
@@ -235,6 +205,12 @@ void setup() {
   }
   Serial.println("Setting Home...");
   setHome();
+
+  // Serial.println("TESTING SERVO");
+  // for (pos = 0; pos <= 180; pos += 1) {   // sweeps servo from 0 to 180 degrees
+  //   myservo.write(pos);
+  //   delay(15);
+  // }
   Serial.println("System Ready");
 
 }
@@ -242,20 +218,63 @@ void setup() {
 void loop() {
   if(Serial.available()){
     recieve = Serial.read();
-    if(recieve == 'x'){
-      move(0, 45);
-      delay(1000);
-      move(1, 45);
-      delay(1000);
-      move(2, 45);
-        //print all angle
-      Serial.print(motor[0].steppos);
-      Serial.print("\t");
-      Serial.print(motor[0].steppos);
-      Serial.print("\t");
-      Serial.println(motor[0].steppos);
-      Serial.println("-----------------------------");
+    if(recieve == 'z'){
+      setAngle(2, 90);
     }
-    delay(100);
+    else if(recieve == 'a'){
+      setAllAngle(60, 80, 100);
+      myservo.write(40);
+      setAngle(1, 90);
+      myservo.write(20);
+      setAngle(0, 70);
+      delay(3000);
+      setAngle(1, 100);
+      myservo.write(0);
+      setAngle(0, 80);
+      delay(3000);
+      setAllAngle(50, 60, 100);
+      for (pos = 0; pos <= 90; pos += 1) {   // sweeps servo from 0 to 180 degrees
+        myservo.write(pos);
+        delay(15);
+      }
+    }
+    else if(recieve == 'e'){
+      setAngle(0, 15);
+      setAngle(1, 30);
+      setAngle(2, 0);
+      setAngle(0, 25);
+      setAngle(1, 70);
+    }
+    else if(recieve == 'h'){
+      setHome();
+    }
+    // else if(recieve == 't'){
+    //   testSwitch();
+    // }
+    // else if(recieve == 's'){
+    //   Serial.print("X: ");
+    //   Serial.print(motor[0].angle);
+    //   Serial.print("\tY: ");
+    //   Serial.print(motor[1].angle);
+    //   Serial.print("\tZ: ");
+    //   Serial.println(motor[2].angle);
+    // }
+    // else if(recieve == 'q'){
+    //   Serial.println("System Stop");
+    //   while(1);
+    // }
+    else if(recieve == 'f'){
+      pos+=1;
+      myservo.write(pos);
+      Serial.println(pos);
+    }
+    else if(recieve == 'b'){
+      pos-=1;
+      myservo.write(pos);
+      Serial.println(pos);
+    }
   }
+  
+  
+
 }
