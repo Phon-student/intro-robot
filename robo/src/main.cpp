@@ -2,8 +2,7 @@
 #include "config.h"
 #include "pinout.h"
 #include "servo.h"
-
-
+ 
 #define isInvertX true
 #define isInvertY false
 #define isInvertZ true
@@ -189,7 +188,7 @@ void setup() {
   motor[2].limitAngle = limitAngleZ;
   // put your setup code here, to run once:
 
-  myservo.attach(11);
+  myservo.attach(servo_pin);
 
   Serial.begin(115200);
   for (int i = 0; i < 3; i++) {
